@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KNN Boundary Visualization</title>
+  <!-- Load Plotly library -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    label {
+      display: inline-block;
+      width: 150px;
+      text-align: right;
+      margin-right: 10px;
+    }
+    input[type="number"] {
+      padding: 5px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #scatterPlot {
+      max-width: 400px;
+      max-height: 400px;
+      margin: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>KNN Boundary Visualization</h1>
+  <div>
+    <label for="numPoints">Number of Points:</label>
+    <input type="number" id="numPoints" min="1" max="200" value="50">
+    <button id="generatePoints">Generate Points</button>
+  </div>
+  <div>
+    <label for="numNeighbors">Number of Neighbors (K):</label>
+    <input type="number" id="numNeighbors" min="1" max="10" value="3">
+  </div>
+  <div>
+    <label for="distanceMetric">Distance Metric:</label>
+    <select id="distanceMetric">
+      <option value="euclidean">Euclidean</option>
+      <option value="manhattan">Manhattan</option>
+      <!-- Add more distance metrics as needed -->
+    </select>
+  </div>
+  <div id="scatterPlot"></div>
+
+  <script>
+    // Function to create random points
+    function createRandomPoints(numPoints) {
+      const points = [];
+      for (let i = 0; i < numPoints; i++) {
+        const x = Math.random() * 10;
+        const y = Math.random() * 10;
+        const label = Math.random() < 0.5 ? 'A' : 'B';
+        points.push({ x, y, label });
+      }
+      return points;
+    }
+
+    // Euclidean distance function
+    function euclideanDistance(point1, point2) {
+      const dx = point1.x - point2.x;
+      const dy = point1.y - point2.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Manhattan distance function
+    function manhattanDistance(point1, point2) {
+      const dx = Math.abs(point1.x - point2.x);
+      const dy = Math.abs(point1.y - point2.y);
+      return dx + dy;
+    }
+
+    // KNN algorithm implementation
+    function knn(data, newPoint, k, distanceMetric) {
+      // Calculate distances between newPoint and all data points
+      const distances = [];
+      for (const point of data) {
+        const distance = distanceMetric === "manhattan"
+          ? manhattanDistance(newPoint, point)
+          : euclideanDistance(newPoint, point);
+
+        distances.push({ point, distance });
+      }
+
+      // Sort distances in ascending order
+      distances.sort((a, b) => a.distance - b.distance);
+
+      // Find the k nearest neighbors
+      const neighbors = distances.slice(0, k);
+
+      // Count the occurrences of each label among the neighbors
+      const labelCounts = {};
+      for (const neighbor of neighbors) {
+        const label = neighbor.point.label;
+        labelCounts[label] = (labelCounts[label] || 0) + 1;
+      }
+
+      // Find the most frequent label among the neighbors
+      let maxCount = 0;
+      let maxLabel;
+      for (const label in labelCounts) {
+        if (labelCounts[label] > maxCount) {
+          maxCount = labelCounts[label];
+          maxLabel = label;
+        }
+      }
+
+      return maxLabel;
+    }
+
+    // Function to get the selected distance metric
+    function getSelectedDistanceMetric() {
+      const selectElement = document.getElementById('distanceMetric');
+      return selectElement.value;
+    }
+
+    // Function to draw the KNN boundary using Plotly
+    function drawKnnBoundaryPlotly(data, k, distanceMetric) {
+      // Separate data points based on label 'A' and 'B'
+      const pointsA = data.filter(point => point.label === 'A');
+      const pointsB = data.filter(point => point.label === 'B');
+
+      // Create scatter plot trace for points 'A'
+      const traceA = {
+        x: pointsA.map(point => point.x),
+        y: pointsA.map(point => point.y),
+        mode: 'markers+text',
+        type: 'scatter',
+        name: 'Class A',
+        text: pointsA.map((point, index) => `A-${index + 1}`), // Labels for points
+        textposition: 'bottom',
+        marker: {
+          color: '#3366cc',
+          size: 10
+        }
+      };
+
+      // Create scatter plot trace for points 'B'
+      const traceB = {
+        x: pointsB.map(point => point.x),
+        y: pointsB.map(point => point.y),
+        mode: 'markers+text',
+        type: 'scatter',
+        name: 'Class B',
+        text: pointsB.map((point, index) => `B-${index + 1}`), // Labels for points
+        textposition: 'bottom',
+        marker: {
+          color: '#dc3912',
+          size: 10
+        }
+      };
+
+      // Calculate the KNN boundary
+      const step = 0.1;
+      const boundaryData = [];
+      for (let x = 0; x <= 10; x += step) {
+        for (let y = 0; y <= 10; y += step) {
+          const newPoint = { x, y };
+          const label = knn(data, newPoint, k, distanceMetric);
+          if (label === 'A') {
+            boundaryData.push({ x, y });
+          }
+        }
+      }
+
+      // Create scatter plot trace for the KNN boundary
+      const traceBoundary = {
+        x: boundaryData.map(point => point.x),
+        y: boundaryData.map(point => point.y),
+        mode: 'lines',
+        type: 'scatter',
+        name: 'KNN Boundary',
+        line: {
+          color: 'rgba(51, 102, 204, 0.6)',
+          width: 2
+        }
+      };
+
+      // Create layout for the plot
+      const layout = {
+        title: 'KNN Boundary Visualization',
+        xaxis: {
+          range: [0, 10],
+          title: 'X'
+        },
+        yaxis: {
+          range: [0, 10],
+          title: 'Y'
+        },
+        dragmode: 'lasso' // Enable point dragging
+      };
+
+      // Plot the scatter plot with the points and KNN boundary
+      const plotData = [traceA, traceB, traceBoundary];
+      Plotly.newPlot('scatterPlot', plotData, layout);
+    }
+
+    // Function to update the plot and draw the KNN boundary
+    function updatePlot() {
+      const k = parseInt(document.getElementById('numNeighbors').value);
+      const distanceMetric = getSelectedDistanceMetric();
+      const numPoints = parseInt(document.getElementById('numPoints').value);
+      data = createRandomPoints(numPoints);
+      drawKnnBoundaryPlotly(data, k, distanceMetric);
+    }
+
+    // Function to generate new points and update the plot
+    function generateAndDrawPoints() {
+      const numPoints = parseInt(document.getElementById('numPoints').value);
+      data = createRandomPoints(numPoints);
+      updatePlot();
+    }
+
+    // Event listener to generate points and update the plot when the "Generate Points" button is clicked
+    document.getElementById('generatePoints').addEventListener('click', generateAndDrawPoints);
+
+    // Event listener to update the plot when the distance metric is changed
+    document.getElementById('distanceMetric').addEventListener('change', updatePlot);
+
+    // Load the initial plot
+    let data = createRandomPoints(50);
+    updatePlot();
+  </script>
+</body>
+</html>
