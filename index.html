@@ -39,9 +39,9 @@
       background-color: #45a049;
     }
     #scatterPlot {
-      max-width: 400px;
-      max-height: 400px;
-      margin: 20px;
+      width: 600px; /* Adjust the width of the plot */
+      height: 600px; /* Adjust the height of the plot */
+      margin: 20px auto; /* Center the plot */
     }
   </style>
 </head>
@@ -49,7 +49,7 @@
   <h1>KNN Boundary Visualization</h1>
   <div>
     <label for="numPoints">Number of Points:</label>
-    <input type="number" id="numPoints" min="1" max="200" value="50">
+    <input type="number" id="numPoints" min="1" max="200" value="15">
     <button id="generatePoints">Generate Points</button>
   </div>
   <div>
@@ -194,8 +194,8 @@
         type: 'scatter',
         name: 'KNN Boundary',
         line: {
-          color: 'rgba(51, 102, 204, 0.6)',
-          width: 2
+          color: 'rgba(0, 0, 255, 0.6)',
+          width: 5
         }
       };
 
@@ -210,10 +210,23 @@
           range: [0, 10],
           title: 'Y'
         },
-        dragmode: 'lasso' // Enable point dragging
+        dragmode: 'lasso', // Enable point dragging
+        shapes: [
+          {
+            type: 'rect',
+            xref: 'x',
+            yref: 'y',
+            x0: 0,
+            y0: 0,
+            x1: 10,
+            y1: 10,
+            line: { width: 0 },
+            fillcolor: 'rgba(255, 0, 0, 0.2)'
+          }
+        ]
       };
 
-      // Plot the scatter plot with the points and KNN boundary
+      // Plot the scatter plot with the points, KNN boundary, and red fill for the area outside the boundary
       const plotData = [traceA, traceB, traceBoundary];
       Plotly.newPlot('scatterPlot', plotData, layout);
     }
@@ -223,7 +236,7 @@
       const k = parseInt(document.getElementById('numNeighbors').value);
       const distanceMetric = getSelectedDistanceMetric();
       const numPoints = parseInt(document.getElementById('numPoints').value);
-      data = createRandomPoints(numPoints);
+      
       drawKnnBoundaryPlotly(data, k, distanceMetric);
     }
 
@@ -239,10 +252,12 @@
 
     // Event listener to update the plot when the distance metric is changed
     document.getElementById('distanceMetric').addEventListener('change', updatePlot);
+    document.getElementById('numNeighbors').addEventListener('change', updatePlot);
 
     // Load the initial plot
-    let data = createRandomPoints(50);
+    let data = createRandomPoints(15);
     updatePlot();
   </script>
 </body>
 </html>
+
